@@ -1,90 +1,58 @@
-# This workflow automates the process of building and pushing
-# two distinct Docker images to GitHub Container Registry (ghcr.io).
+# This workflow builds a Docker image for Hive using the flexible Dockerfile
+# and pushes it to a container registry like Docker Hub.
 
-name: Build Hive Images
-
+name: Build and Push Hive Image
 
 on:
-  workflow_dispatch:
   push:
-    branches: [ "main", "master", "develop" ]
-    tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+'
-      - '[0-9]+.[0-9]+.[0-9]+'
-      - '[0-9]+.[0-9]+.[0-9]+-*'
-  pull_request:
-    branches: [ "main", "master", "develop" ]
-  release:
-    types: [published]
-
-env:
-  REGISTRY: ghcr.io
-
+    branches:
+      - main
+  # You can also add a workflow_dispatch trigger to run it manually
+  # workflow_dispatch:
 
 jobs:
-  build-hive-313:
+  build-and-push:
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
+      id-token: write
+
+    strategy:
+      # Use a matrix to build different versions of the image
+      matrix:
+        include:
+          # This combination is for Hive 3.1.3, which requires the older PostgreSQL driver.
+          - hive_tag: "3.1.3"
+            pg_driver_version: "42.2.8"
+          # This combination is for a newer, standalone Hive metastore,
+          # which can use a newer PostgreSQL driver.
+          - hive_tag: "standalone-metastore-4.1.0"
+            pg_driver_version: "42.7.7"
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Log in to GitHub Container Registry
+      # Log in to Docker Hub. You'll need to set these as secrets in your repository settings.
+      # DOCKERHUB_USERNAME
+      # DOCKERHUB_TOKEN (a Personal Access Token)
+      - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build and push Hive 3.1.3 image
+      # Build and push the Docker image with the specified build arguments from the matrix.
+      - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: ./Dockerfile
           push: true
-          tags: ${{ env.REGISTRY }}/${{ github.repository }}:hive-3.1.3
+          file: ./Dockerfile  # Assumes the Dockerfile is in the root directory
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/hive-metastore:${{ matrix.hive_tag }}-${{ matrix.pg_driver_version }}
           build-args: |
-            HIVE_IMAGE_TAG=3.1.3
-            POSTGRESQL_DRIVER_VERSION=42.2.8
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+            HIVE_IMAGE_TAG=${{ matrix.hive_tag }}
+            POSTGRESQL_DRIVER_VERSION=${{ matrix.pg_driver_version }}
 
-
-  build-metastore-410:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build and push Metastore 4.1.0 image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./Dockerfile
-          push: true
-          tags: ${{ env.REGISTRY }}/${{ github.repository }}:hive-metastore-4.1.0
-          build-args: |
-            HIVE_IMAGE_TAG=standalone-metastore-4.1.0
-            POSTGRESQL_DRIVER_VERSION=42.7.7
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
