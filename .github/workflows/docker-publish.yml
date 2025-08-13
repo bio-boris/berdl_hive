@@ -51,6 +51,7 @@ jobs:
           tags: ${{ env.REGISTRY }}/${{ github.repository }}:hive-3.1.3
           build-args: |
             HIVE_IMAGE_TAG=3.1.3
+            POSTGRESQL_DRIVER_VERSION=42.2.8
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -84,5 +85,6 @@ jobs:
           tags: ${{ env.REGISTRY }}/${{ github.repository }}:hive-metastore-4.1.0
           build-args: |
             HIVE_IMAGE_TAG=standalone-metastore-4.1.0
+            POSTGRESQL_DRIVER_VERSION=42.7.7
           cache-from: type=gha
           cache-to: type=gha,mode=max
