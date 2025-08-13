@@ -1,7 +1,3 @@
-
 FROM apache/hive:3.1.3
-
-USER root
-RUN curl -o /opt/hive/lib/postgresql-42.7.7.jar \
-    https://repo1.maven.org/maven2/org/postgresql/postgresql/42.7.7/postgresql-42.7.7.jar
+COPY postgresql-42.7.7.jar /opt/hive/lib/
 USER hive
