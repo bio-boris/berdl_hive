@@ -1,14 +1,18 @@
 # This Dockerfile is designed to be highly flexible and reusable.
 # It uses build arguments to specify the base Hive image and the JDBC driver version.
 
-# ARG for the Hive image tag (e.g., 3.1.3 or standalone-metastore-4.1.0)
+# This ARG is for the base Hive image tag. It is in scope for the FROM instruction.
 ARG HIVE_IMAGE_TAG
 
-# ARG for the PostgreSQL driver version (e.g., 42.2.8 or 42.7.7)
+# This ARG is for the PostgreSQL driver version. It is in scope until the FROM instruction.
 ARG POSTGRESQL_DRIVER_VERSION
 
-# Use the arguments in the FROM and COPY instructions.
+# Use the HIVE_IMAGE_TAG argument in the FROM instruction.
 FROM apache/hive:${HIVE_IMAGE_TAG}
+
+# IMPORTANT: The ARG for POSTGRESQL_DRIVER_VERSION must be redeclared here
+# to be in scope for the rest of the build stage, including the COPY command.
+ARG POSTGRESQL_DRIVER_VERSION
 
 # Copy the specific version of the PostgreSQL JDBC driver.
 # The filename is constructed dynamically from the build argument.
